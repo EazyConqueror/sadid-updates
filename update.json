@@ -1,5 +1,5 @@
 {
-    "version": "1.0.0",
+    "version": "1.3.0",
     "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/1.2.0/1.exe",
     "releaseNotes": "- إضافة نظام عرض معلومات المستخدم\n- تحسين واجهة تسجيل الدخول\n- إصلاح مشاكل الاتصال بـ Firebase\n- تحسينات عامة في الأداء"
 }
