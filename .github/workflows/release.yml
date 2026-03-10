@@ -10,6 +10,9 @@ jobs:
 
     steps:
 
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
     - name: Download file
       run: |
         wget -O file "${{ github.event.client_payload.url }}"
@@ -20,7 +23,7 @@ jobs:
         mv file "$name"
         echo "FILENAME=$name" >> $GITHUB_ENV
 
-    - name: Upload to Release
+    - name: Create Release and Upload File
       uses: softprops/action-gh-release@v1
       with:
         tag_name: auto
