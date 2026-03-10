@@ -1,0 +1,30 @@
+name: Upload File From URL
+
+on:
+  repository_dispatch:
+    types: [upload]
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Download file
+      run: |
+        wget -O file "${{ github.event.client_payload.url }}"
+
+    - name: Rename file
+      run: |
+        name=$(basename "${{ github.event.client_payload.url }}")
+        mv file "$name"
+        echo "FILENAME=$name" >> $GITHUB_ENV
+
+    - name: Upload to Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: auto
+        name: Auto Release
+        files: ${{ env.FILENAME }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
