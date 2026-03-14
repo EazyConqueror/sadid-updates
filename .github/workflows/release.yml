@@ -4,6 +4,9 @@ on:
   repository_dispatch:
     types: [upload]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   upload:
     runs-on: ubuntu-latest
@@ -11,98 +14,116 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq aria2 file
+
       - name: Download file
         run: |
-          # استخدام curl بدل wget مع User-Agent حقيقي وتتبع التحويلات
           DOWNLOAD_URL="${{ github.event.client_payload.url }}"
           CUSTOM_NAME="${{ github.event.client_payload.filename }}"
 
-          echo "🔗 Downloading: $DOWNLOAD_URL"
+          echo "🔗 URL: $DOWNLOAD_URL"
+          echo "📁 Custom name: $CUSTOM_NAME"
 
-          curl -L \
-            -o "downloaded_file" \
-            -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
-            -H "Accept: */*" \
-            -H "Referer: $DOWNLOAD_URL" \
-            --max-time 600 \
+          # ========== المحاولة 1: curl مع headers متصفح ==========
+          echo "━━━ Try 1: curl ━━━"
+          curl -L -o "downloaded_file" \
+            -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+            -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
+            -H "Accept-Language: en-US,en;q=0.5" \
+            -H "Referer: $(echo "$DOWNLOAD_URL" | grep -oP 'https?://[^/]+')" \
+            --max-time 900 \
             --retry 3 \
             --retry-delay 5 \
-            -w "\nHTTP_CODE:%{http_code}\nFINAL_URL:%{url_effective}\nCONTENT_TYPE:%{content_type}\nSIZE:%{size_download}\n" \
-            "$DOWNLOAD_URL" 2>&1 | tee /tmp/curl_output.txt
+            -w "\nHTTP_CODE:%{http_code}\nCONTENT_TYPE:%{content_type}\nSIZE:%{size_download}\n" \
+            "$DOWNLOAD_URL" 2>&1 | tee /tmp/curl_log.txt
 
-          # التحقق من نجاح التحميل
-          HTTP_CODE=$(grep "HTTP_CODE:" /tmp/curl_output.txt | tail -1 | cut -d: -f2)
+          HTTP_CODE=$(grep "HTTP_CODE:" /tmp/curl_log.txt | tail -1 | cut -d: -f2)
+          CONTENT_TYPE=$(grep "CONTENT_TYPE:" /tmp/curl_log.txt | tail -1 | cut -d: -f2-)
           FILE_SIZE=$(stat -c%s "downloaded_file" 2>/dev/null || echo "0")
 
-          echo "📊 HTTP Code: $HTTP_CODE"
-          echo "📦 File Size: $FILE_SIZE bytes"
+          echo "📊 HTTP: $HTTP_CODE | Type: $CONTENT_TYPE | Size: $FILE_SIZE"
 
-          if [ "$HTTP_CODE" != "200" ] || [ "$FILE_SIZE" -lt 1000 ]; then
-            echo "❌ Download failed! HTTP=$HTTP_CODE Size=$FILE_SIZE"
-            cat downloaded_file 2>/dev/null | head -20
-            exit 1
+          # هل حصلنا على HTML بدل ملف؟
+          IS_HTML=false
+          if echo "$CONTENT_TYPE" | grep -qi "text/html"; then IS_HTML=true; fi
+          if [ "$FILE_SIZE" -lt 5000 ] && file downloaded_file | grep -qi "html"; then IS_HTML=true; fi
+
+          if [ "$HTTP_CODE" = "200" ] && [ "$IS_HTML" = "false" ] && [ "$FILE_SIZE" -gt 1000 ]; then
+            echo "✅ curl succeeded!"
+          else
+            echo "⚠️ curl failed, trying aria2c..."
+
+            # ========== المحاولة 2: aria2c ==========
+            echo "━━━ Try 2: aria2c ━━━"
+            rm -f downloaded_file
+
+            aria2c -x 16 -s 16 \
+              --max-tries=3 \
+              --retry-wait=5 \
+              --timeout=300 \
+              --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+              --header="Referer: $(echo "$DOWNLOAD_URL" | grep -oP 'https?://[^/]+')" \
+              -o "downloaded_file" \
+              "$DOWNLOAD_URL" 2>&1 || true
+
+            FILE_SIZE=$(stat -c%s "downloaded_file" 2>/dev/null || echo "0")
+
+            if [ "$FILE_SIZE" -gt 1000 ] && ! file downloaded_file | grep -qi "html"; then
+              echo "✅ aria2c succeeded! Size: $FILE_SIZE"
+            else
+              echo "❌ فشل التحميل - الموقع محمي بـ JS Challenge"
+              echo "💡 شارك الملف مباشرة في تلجرام بدل الرابط"
+              exit 1
+            fi
           fi
-
-          echo "✅ Download successful!"
 
       - name: Determine filename
         run: |
           DOWNLOAD_URL="${{ github.event.client_payload.url }}"
           CUSTOM_NAME="${{ github.event.client_payload.filename }}"
 
-          if [ -n "$CUSTOM_NAME" ] && [ "$CUSTOM_NAME" != "" ]; then
-            # اسم مخصص من المستخدم
+          if [ -n "$CUSTOM_NAME" ] && [ "$CUSTOM_NAME" != "" ] && [ "$CUSTOM_NAME" != "null" ]; then
             FILENAME="$CUSTOM_NAME"
           else
-            # محاولة استخراج الاسم من Content-Disposition
-            FILENAME=$(grep -oP 'filename="\K[^"]+' /tmp/curl_output.txt 2>/dev/null || true)
-
-            if [ -z "$FILENAME" ]; then
-              # استخراج من الرابط النهائي
-              FINAL_URL=$(grep "FINAL_URL:" /tmp/curl_output.txt | tail -1 | cut -d: -f2-)
-              FILENAME=$(basename "$FINAL_URL" | cut -d'?' -f1 | cut -d'#' -f1)
-            fi
-
-            # لو الاسم ما زال غريب (مثل download.php)
-            if echo "$FILENAME" | grep -qiE '\.php|\.asp|^$|^download'; then
-              # تحديد الامتداد من نوع الملف
+            FILENAME=$(basename "$DOWNLOAD_URL" | cut -d'?' -f1 | cut -d'#' -f1)
+            if echo "$FILENAME" | grep -qiE '\.php|\.asp|^$|^download|^index'; then
               MIME=$(file --mime-type -b downloaded_file)
               case "$MIME" in
                 application/vnd.android.package-archive) EXT="apk" ;;
                 application/zip) EXT="zip" ;;
-                application/x-7z-compressed) EXT="7z" ;;
-                application/x-rar*) EXT="rar" ;;
                 application/pdf) EXT="pdf" ;;
                 video/mp4) EXT="mp4" ;;
+                audio/mpeg) EXT="mp3" ;;
                 image/jpeg) EXT="jpg" ;;
                 image/png) EXT="png" ;;
-                application/octet-stream) EXT="bin" ;;
                 *) EXT="bin" ;;
               esac
-              TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-              FILENAME="file_${TIMESTAMP}.${EXT}"
+              FILENAME="file_$(date +%Y%m%d_%H%M%S).${EXT}"
             fi
           fi
 
+          FILENAME=$(echo "$FILENAME" | sed 's/[^a-zA-Z0-9._-]/_/g')
           mv downloaded_file "$FILENAME"
           echo "FILENAME=$FILENAME" >> $GITHUB_ENV
-          echo "📁 Final filename: $FILENAME"
+          echo "📁 Final: $FILENAME ($(stat -c%s "$FILENAME") bytes)"
 
       - name: Generate unique tag
         run: |
-          TAG="release-$(date +%Y%m%d-%H%M%S)"
+          TAG="v$(date +%Y%m%d-%H%M%S)"
           echo "TAG=$TAG" >> $GITHUB_ENV
-          echo "🏷️ Tag: $TAG"
 
-      - name: Create Release and Upload File
-        uses: softprops/action-gh-release@v1
+      - name: Create Release and Upload
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.TAG }}
           name: "📦 ${{ env.FILENAME }}"
           body: |
             **File:** `${{ env.FILENAME }}`
-            **Source:** `${{ github.event.client_payload.url }}`
-            **Uploaded:** ${{ github.event.client_payload.timestamp }}
+            **Source:** `${{ github.event.client_payload.source_type }}`
+            **Time:** `${{ github.event.client_payload.timestamp }}`
           files: ${{ env.FILENAME }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
