@@ -7,27 +7,102 @@ on:
 jobs:
   upload:
     runs-on: ubuntu-latest
-
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Download file
+        run: |
+          # استخدام curl بدل wget مع User-Agent حقيقي وتتبع التحويلات
+          DOWNLOAD_URL="${{ github.event.client_payload.url }}"
+          CUSTOM_NAME="${{ github.event.client_payload.filename }}"
 
-    - name: Download file
-      run: |
-        wget -O file "${{ github.event.client_payload.url }}"
+          echo "🔗 Downloading: $DOWNLOAD_URL"
 
-    - name: Rename file
-      run: |
-        name=$(basename "${{ github.event.client_payload.url }}")
-        mv file "$name"
-        echo "FILENAME=$name" >> $GITHUB_ENV
+          curl -L \
+            -o "downloaded_file" \
+            -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
+            -H "Accept: */*" \
+            -H "Referer: $DOWNLOAD_URL" \
+            --max-time 600 \
+            --retry 3 \
+            --retry-delay 5 \
+            -w "\nHTTP_CODE:%{http_code}\nFINAL_URL:%{url_effective}\nCONTENT_TYPE:%{content_type}\nSIZE:%{size_download}\n" \
+            "$DOWNLOAD_URL" 2>&1 | tee /tmp/curl_output.txt
 
-    - name: Create Release and Upload File
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: auto
-        name: Auto Release
-        files: ${{ env.FILENAME }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # التحقق من نجاح التحميل
+          HTTP_CODE=$(grep "HTTP_CODE:" /tmp/curl_output.txt | tail -1 | cut -d: -f2)
+          FILE_SIZE=$(stat -c%s "downloaded_file" 2>/dev/null || echo "0")
+
+          echo "📊 HTTP Code: $HTTP_CODE"
+          echo "📦 File Size: $FILE_SIZE bytes"
+
+          if [ "$HTTP_CODE" != "200" ] || [ "$FILE_SIZE" -lt 1000 ]; then
+            echo "❌ Download failed! HTTP=$HTTP_CODE Size=$FILE_SIZE"
+            cat downloaded_file 2>/dev/null | head -20
+            exit 1
+          fi
+
+          echo "✅ Download successful!"
+
+      - name: Determine filename
+        run: |
+          DOWNLOAD_URL="${{ github.event.client_payload.url }}"
+          CUSTOM_NAME="${{ github.event.client_payload.filename }}"
+
+          if [ -n "$CUSTOM_NAME" ] && [ "$CUSTOM_NAME" != "" ]; then
+            # اسم مخصص من المستخدم
+            FILENAME="$CUSTOM_NAME"
+          else
+            # محاولة استخراج الاسم من Content-Disposition
+            FILENAME=$(grep -oP 'filename="\K[^"]+' /tmp/curl_output.txt 2>/dev/null || true)
+
+            if [ -z "$FILENAME" ]; then
+              # استخراج من الرابط النهائي
+              FINAL_URL=$(grep "FINAL_URL:" /tmp/curl_output.txt | tail -1 | cut -d: -f2-)
+              FILENAME=$(basename "$FINAL_URL" | cut -d'?' -f1 | cut -d'#' -f1)
+            fi
+
+            # لو الاسم ما زال غريب (مثل download.php)
+            if echo "$FILENAME" | grep -qiE '\.php|\.asp|^$|^download'; then
+              # تحديد الامتداد من نوع الملف
+              MIME=$(file --mime-type -b downloaded_file)
+              case "$MIME" in
+                application/vnd.android.package-archive) EXT="apk" ;;
+                application/zip) EXT="zip" ;;
+                application/x-7z-compressed) EXT="7z" ;;
+                application/x-rar*) EXT="rar" ;;
+                application/pdf) EXT="pdf" ;;
+                video/mp4) EXT="mp4" ;;
+                image/jpeg) EXT="jpg" ;;
+                image/png) EXT="png" ;;
+                application/octet-stream) EXT="bin" ;;
+                *) EXT="bin" ;;
+              esac
+              TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+              FILENAME="file_${TIMESTAMP}.${EXT}"
+            fi
+          fi
+
+          mv downloaded_file "$FILENAME"
+          echo "FILENAME=$FILENAME" >> $GITHUB_ENV
+          echo "📁 Final filename: $FILENAME"
+
+      - name: Generate unique tag
+        run: |
+          TAG="release-$(date +%Y%m%d-%H%M%S)"
+          echo "TAG=$TAG" >> $GITHUB_ENV
+          echo "🏷️ Tag: $TAG"
+
+      - name: Create Release and Upload File
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.TAG }}
+          name: "📦 ${{ env.FILENAME }}"
+          body: |
+            **File:** `${{ env.FILENAME }}`
+            **Source:** `${{ github.event.client_payload.url }}`
+            **Uploaded:** ${{ github.event.client_payload.timestamp }}
+          files: ${{ env.FILENAME }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
