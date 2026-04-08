@@ -1,6 +1,5 @@
 {
-  "version": "1.3.0",
-  "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/1.2.0/SadidForWhatsApp_Setup_v1.3.0.exe",
-  "releaseNotes": "⚠️ تحديث إجباري وهام\n\n⚙️ تحسينات عامة على جميع الأقسام:\n\n📱 تحسين التعرف على الأجهزة:\n- دقة أعلى في اكتشاف الأجهزة المتصلة عبر ADB\n- حل مشاكل عدم ظهور بعض الأجهزة\n- تحسين التعامل مع تعدد الأجهزة المتصلة\n\n🚀 ميزات وتحسينات إضافية:\n- تحسين تنفيذ أوامر ADB واستقرارها\n❗ هذا التحديث إجباري للاستمرار في استخدام الأداة، يرجى التحديث الآن لتجنب توقف الخدمة.",
-  "forceUpdate": true
+  "version": "1.5.0",
+  "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/1.2.0/SadidForWhatsApp_Update.exe",
+  "releaseNotes": "تم اضافه العديد من نسخ \n الواتساب المعدلة"
 }
