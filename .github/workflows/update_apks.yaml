@@ -1,0 +1,167 @@
+name: Update APKs
+
+# يعمل يدويا فقط: تبويب Actions -> Update APKs -> Run workflow
+on:
+  workflow_dispatch:
+    inputs:
+      url_0:
+        description: "رابط تحديث 0.apk (اتركه فارغا اذا لا تريد تحديثه)"
+        required: false
+        default: ""
+        type: string
+      url_1:
+        description: "رابط تحديث 1.apk (اتركه فارغا اذا لا تريد تحديثه)"
+        required: false
+        default: ""
+        type: string
+      url_2:
+        description: "رابط تحديث 2.apk (اتركه فارغا اذا لا تريد تحديثه)"
+        required: false
+        default: ""
+        type: string
+      url_3:
+        description: "رابط تحديث 3.apk (اتركه فارغا اذا لا تريد تحديثه)"
+        required: false
+        default: ""
+        type: string
+      url_4:
+        description: "رابط تحديث 4.apk (اتركه فارغا اذا لا تريد تحديثه)"
+        required: false
+        default: ""
+        type: string
+      url_5:
+        description: "رابط تحديث 5.apk (اتركه فارغا اذا لا تريد تحديثه)"
+        required: false
+        default: ""
+        type: string
+      release_tag:
+        description: "اسم الـ release الذي ستوضع فيه الملفات"
+        required: false
+        default: "1.2.0"
+        type: string
+
+# صلاحية الكتابة على المستودع (لحذف/رفع ملفات الـ release)
+permissions:
+  contents: write
+
+# لا تشغل عمليتين معا على نفس الـ release
+concurrency:
+  group: update-apks-${{ inputs.release_tag }}
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: pip install --upgrade pip requests playwright
+
+      - name: Install a REAL browser (Chromium) + Xvfb
+        run: |
+          # Playwright يثبت نسخة Chromium حقيقية كاملة (نفس المتصفح الذي يستخدمه
+          # المستخدمون العاديون)، مع كل مكتبات النظام التي يحتاجها لتشغيلها.
+          python -m playwright install --with-deps chromium
+          # Xvfb = شاشة عرض وهمية، تسمح بتشغيل المتصفح "غير مخفي" (headless=False)
+          # وهو أصعب على مواقع مثل APKMirror/MediaFire اكتشافه كأتمتة.
+          sudo apt-get install -y -qq xvfb
+
+      - name: Check GitHub CLI
+        run: gh --version
+
+      - name: Update each requested APK
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ inputs.release_tag }}
+          URL_0: ${{ inputs.url_0 }}
+          URL_1: ${{ inputs.url_1 }}
+          URL_2: ${{ inputs.url_2 }}
+          URL_3: ${{ inputs.url_3 }}
+          URL_4: ${{ inputs.url_4 }}
+          URL_5: ${{ inputs.url_5 }}
+        run: |
+          set -e
+
+          # كل استدعاء لـ download_apk.py يمر عبر هذه الدالة، التي تشغله داخل
+          # شاشة وهمية (Xvfb) ليعمل المتصفح الحقيقي (غير headless) على سيرفر
+          # بلا شاشة فعلية. (ملاحظة: لا تستخدم eval هنا، فهو يكسر تمرير
+          # --server-args بمسافات داخله)
+          run_with_display() {
+            xvfb-run --auto-servernum --server-args="-screen 0 1366x900x24" "$@"
+          }
+
+          UPDATED=""
+          SKIPPED=""
+          FAILED=""
+
+          for i in 0 1 2 3 4 5; do
+            var="URL_$i"
+            url="${!var}"
+
+            if [ -z "$url" ]; then
+              echo "== $i.apk : لا يوجد رابط، تخطي =="
+              SKIPPED="$SKIPPED $i.apk"
+              continue
+            fi
+
+            echo "== $i.apk : تحميل من $url =="
+            mkdir -p downloads
+            out="downloads/$i.apk"
+            rm -f "$out"
+
+            if run_with_display python scripts/download_apk.py --url "$url" --out "$out"; then
+              echo "== $i.apk : تحميل ناجح، رفع الى الـ release =="
+              if python scripts/replace_release_asset.py \
+                    --repo "$REPO" --tag "$TAG" \
+                    --asset-name "$i.apk" --file "$out"; then
+                UPDATED="$UPDATED $i.apk"
+              else
+                echo "::error::فشل رفع $i.apk الى الـ release"
+                FAILED="$FAILED $i.apk"
+              fi
+            else
+              echo "::error::فشل تحميل $i.apk من الرابط المعطى"
+              FAILED="$FAILED $i.apk"
+            fi
+
+            rm -f "$out"
+          done
+
+          echo "UPDATED=$UPDATED" >> "$GITHUB_ENV"
+          echo "SKIPPED=$SKIPPED" >> "$GITHUB_ENV"
+          echo "FAILED=$FAILED" >> "$GITHUB_ENV"
+
+          if [ -n "$FAILED" ]; then
+            echo "بعض الملفات فشلت: $FAILED"
+            exit 1
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### نتيجة تحديث الـ APK على release: ${{ inputs.release_tag }}"
+            echo ""
+            echo "- تم تحديثها: ${UPDATED:-لا شيء}"
+            echo "- تم تخطيها (بلا رابط): ${SKIPPED:-لا شيء}"
+            echo "- فشلت: ${FAILED:-لا شيء}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload debug screenshot on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-files
+          path: |
+            downloads/*
+          if-no-files-found: ignore
+          retention-days: 3
