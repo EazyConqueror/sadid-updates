@@ -143,24 +143,7 @@ jobs:
             step_failed=0
 
             if run_with_display python scripts/download_apk.py --url "$url" --out "$out"; then
-              echo "== $label : تحميل ناجح، رفع الى الـ release (فرع files) =="
-
-              switch_ok=1
-              if ! git switch files 2>/tmp/switch_err; then
-                echo "branch 'files' not found locally, fetching..."
-                if git fetch origin files:files 2>>/tmp/switch_err && git switch files 2>>/tmp/switch_err; then
-                  switch_ok=0
-                fi
-              else
-                switch_ok=0
-              fi
-
-              if [ "$switch_ok" -ne 0 ]; then
-                echo "::error::تعذر الانتقال الى فرع files: $(cat /tmp/switch_err)"
-                FAILED="$FAILED $label"
-                git switch main 2>/dev/null || true
-                continue
-              fi
+              echo "== $label : تحميل ناجح، رفع الى الـ release =="
 
               if python scripts/replace_release_asset.py \
                     --repo "$REPO" --tag "$TAG" \
@@ -171,8 +154,6 @@ jobs:
                 FAILED="$FAILED $label"
                 step_failed=1
               fi
-
-              git switch main
 
               if [ "$step_failed" -eq 0 ]; then
                 echo "== $label : تحديث $json_path =="
