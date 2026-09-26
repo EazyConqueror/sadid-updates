@@ -1,58 +1,66 @@
 name: Update APKs
+run-name: >-
+  ${{ inputs.run_token != '' && format('update-apks [{0}]', inputs.run_token) || 'update-apks (manual)' }}
 
 # يعمل يدويا فقط: تبويب Actions -> Update APKs -> Run workflow
+# كل تطبيق مستقل تماما: يمكن تحديث واحد فقط، او عدة تطبيقات معا في
+# تشغيل واحد. كل تطبيق يُحمَّل ويُرفع وتُحدَّث نسخة الـ JSON الخاصة به
+# بالتتابع؛ نجاح او فشل تطبيق لا يوقف بقية التطبيقات.
 on:
   workflow_dispatch:
     inputs:
-      url_0:
-        description: "رابط تحديث 0.apk (اتركه فارغا اذا لا تريد تحديثه)"
+      url_whatsapp:
+        description: "0.apk - WhatsApp : رابط التحديث (اتركه فارغا لعدم تحديثه)"
         required: false
         default: ""
         type: string
-      url_1:
-        description: "رابط تحديث 1.apk (اتركه فارغا اذا لا تريد تحديثه)"
+      url_obwhatsapp:
+        description: "1.apk - OBWhatsApp : رابط التحديث (اتركه فارغا لعدم تحديثه)"
         required: false
         default: ""
         type: string
-      url_2:
-        description: "رابط تحديث 2.apk (اتركه فارغا اذا لا تريد تحديثه)"
+      url_business:
+        description: "2.apk - Business : رابط التحديث (اتركه فارغا لعدم تحديثه)"
         required: false
         default: ""
         type: string
-      url_3:
-        description: "رابط تحديث 3.apk (اتركه فارغا اذا لا تريد تحديثه)"
+      url_gbwhatsapp:
+        description: "3.apk - GBWhatsApp : رابط التحديث (اتركه فارغا لعدم تحديثه)"
         required: false
         default: ""
         type: string
-      url_4:
-        description: "رابط تحديث 4.apk (اتركه فارغا اذا لا تريد تحديثه)"
+      url_ob3whatsapp:
+        description: "4.apk - OB3WhatsApp : رابط التحديث (اتركه فارغا لعدم تحديثه)"
         required: false
         default: ""
         type: string
-      url_5:
-        description: "رابط تحديث 5.apk (اتركه فارغا اذا لا تريد تحديثه)"
+      url_ob2whatsapp:
+        description: "5.apk - OB2WhatsApp : رابط التحديث (اتركه فارغا لعدم تحديثه)"
         required: false
         default: ""
         type: string
       release_tag:
-        description: "اسم الـ release الذي ستوضع فيه الملفات"
+        description: "اسم الـ Release الذي ستوضع فيه الملفات"
         required: false
         default: "1.2.0"
         type: string
+      run_token:
+        description: "(داخلي) معرّف فريد يستخدمه بوت تيليغرام لمتابعة هذا التشغيل تحديدا. اتركه فارغا عند التشغيل اليدوي."
+        required: false
+        default: ""
+        type: string
 
-# صلاحية الكتابة على المستودع (لحذف/رفع ملفات الـ release)
 permissions:
   contents: write
 
-# لا تشغل عمليتين معا على نفس الـ release
 concurrency:
-  group: update-apks-${{ inputs.release_tag }}
+  group: update-apks
   cancel-in-progress: false
 
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -67,81 +75,138 @@ jobs:
 
       - name: Install a REAL browser (Chromium) + Xvfb
         run: |
-          # Playwright يثبت نسخة Chromium حقيقية كاملة (نفس المتصفح الذي يستخدمه
-          # المستخدمون العاديون)، مع كل مكتبات النظام التي يحتاجها لتشغيلها.
           python -m playwright install --with-deps chromium
-          # Xvfb = شاشة عرض وهمية، تسمح بتشغيل المتصفح "غير مخفي" (headless=False)
-          # وهو أصعب على مواقع مثل APKMirror/MediaFire اكتشافه كأتمتة.
           sudo apt-get install -y -qq xvfb
 
       - name: Check GitHub CLI
         run: gh --version
 
-      - name: Update each requested APK
+      - name: Configure Git identity
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Update each requested app
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           TAG: ${{ inputs.release_tag }}
-          URL_0: ${{ inputs.url_0 }}
-          URL_1: ${{ inputs.url_1 }}
-          URL_2: ${{ inputs.url_2 }}
-          URL_3: ${{ inputs.url_3 }}
-          URL_4: ${{ inputs.url_4 }}
-          URL_5: ${{ inputs.url_5 }}
+          URL_WHATSAPP: ${{ inputs.url_whatsapp }}
+          URL_OBWHATSAPP: ${{ inputs.url_obwhatsapp }}
+          URL_BUSINESS: ${{ inputs.url_business }}
+          URL_GBWHATSAPP: ${{ inputs.url_gbwhatsapp }}
+          URL_OB3WHATSAPP: ${{ inputs.url_ob3whatsapp }}
+          URL_OB2WHATSAPP: ${{ inputs.url_ob2whatsapp }}
         run: |
           set -e
 
-          # كل استدعاء لـ download_apk.py يمر عبر هذه الدالة، التي تشغله داخل
-          # شاشة وهمية (Xvfb) ليعمل المتصفح الحقيقي (غير headless) على سيرفر
-          # بلا شاشة فعلية. (ملاحظة: لا تستخدم eval هنا، فهو يكسر تمرير
-          # --server-args بمسافات داخله)
           run_with_display() {
             xvfb-run --auto-servernum --server-args="-screen 0 1366x900x24" "$@"
           }
+
+          APPS="
+          WhatsApp:0:WhatsAppUpdata/WhatsApp.json
+          OBWhatsApp:1:WhatsAppUpdata/OBWhatsApp.json
+          Business:2:WhatsAppUpdata/Business.json
+          GBWhatsApp:3:WhatsAppUpdata/GBWhatsApp.json
+          OB3WhatsApp:4:WhatsAppUpdata/OB3WhatsApp.json
+          OB2WhatsApp:5:WhatsAppUpdata/OB2WhatsApp.json
+          "
 
           UPDATED=""
           SKIPPED=""
           FAILED=""
 
-          for i in 0 1 2 3 4 5; do
-            var="URL_$i"
-            url="${!var}"
+          for entry in $APPS; do
+            name="${entry%%:*}"
+            rest="${entry#*:}"
+            apk_num="${rest%%:*}"
+            json_path="${rest#*:}"
+
+            var_name="URL_$(echo "$name" | tr '[:lower:]' '[:upper:]')"
+            url="${!var_name}"
+
+            label="$apk_num.apk ($name)"
 
             if [ -z "$url" ]; then
-              echo "== $i.apk : لا يوجد رابط، تخطي =="
-              SKIPPED="$SKIPPED $i.apk"
+              echo "== $label : لا يوجد رابط، تخطي =="
+              SKIPPED="$SKIPPED $label"
               continue
             fi
 
-            echo "== $i.apk : تحميل من $url =="
-            mkdir -p downloads
-            out="downloads/$i.apk"
+            echo "== $label : تحميل من $url =="
+            work_dir="_work/$apk_num"
+            mkdir -p "$work_dir"
+            out="$work_dir/$apk_num.apk"
             rm -f "$out"
+
+            step_failed=0
 
             if run_with_display python scripts/download_apk.py --url "$url" --out "$out"; then
-              echo "== $i.apk : تحميل ناجح، رفع الى الـ release =="
+              echo "== $label : تحميل ناجح، رفع الى الـ release (فرع files) =="
+
+              switch_ok=1
+              if ! git switch files 2>/tmp/switch_err; then
+                echo "branch 'files' not found locally, fetching..."
+                if git fetch origin files:files 2>>/tmp/switch_err && git switch files 2>>/tmp/switch_err; then
+                  switch_ok=0
+                fi
+              else
+                switch_ok=0
+              fi
+
+              if [ "$switch_ok" -ne 0 ]; then
+                echo "::error::تعذر الانتقال الى فرع files: $(cat /tmp/switch_err)"
+                FAILED="$FAILED $label"
+                git switch main 2>/dev/null || true
+                continue
+              fi
+
               if python scripts/replace_release_asset.py \
                     --repo "$REPO" --tag "$TAG" \
-                    --asset-name "$i.apk" --file "$out"; then
-                UPDATED="$UPDATED $i.apk"
+                    --asset-name "$apk_num.apk" --file "$out"; then
+                echo "== $label : نجح رفع الملف الى الـ release =="
               else
-                echo "::error::فشل رفع $i.apk الى الـ release"
-                FAILED="$FAILED $i.apk"
+                echo "::error::فشل رفع $label الى الـ release"
+                FAILED="$FAILED $label"
+                step_failed=1
+              fi
+
+              git switch main
+
+              if [ "$step_failed" -eq 0 ]; then
+                echo "== $label : تحديث $json_path =="
+                if python scripts/bump_json_version.py \
+                      --json-path "$json_path" \
+                      --repo "$REPO" --tag "$TAG" --asset-name "$apk_num.apk"; then
+                  UPDATED="$UPDATED $label"
+                else
+                  echo "::error::تم رفع $label لكن فشل تحديث $json_path"
+                  FAILED="$FAILED $label(json)"
+                fi
               fi
             else
-              echo "::error::فشل تحميل $i.apk من الرابط المعطى"
-              FAILED="$FAILED $i.apk"
+              echo "::error::فشل تحميل $label من الرابط المعطى"
+              FAILED="$FAILED $label"
             fi
 
-            rm -f "$out"
+            rm -rf "$work_dir"
           done
 
-          echo "UPDATED=$UPDATED" >> "$GITHUB_ENV"
-          echo "SKIPPED=$SKIPPED" >> "$GITHUB_ENV"
-          echo "FAILED=$FAILED" >> "$GITHUB_ENV"
+          {
+            echo "UPDATED<<EOF_UPDATED"
+            echo "$UPDATED"
+            echo "EOF_UPDATED"
+            echo "SKIPPED<<EOF_SKIPPED"
+            echo "$SKIPPED"
+            echo "EOF_SKIPPED"
+            echo "FAILED<<EOF_FAILED"
+            echo "$FAILED"
+            echo "EOF_FAILED"
+          } >> "$GITHUB_ENV"
 
           if [ -n "$FAILED" ]; then
-            echo "بعض الملفات فشلت: $FAILED"
+            echo "بعض التطبيقات فشلت: $FAILED"
             exit 1
           fi
 
@@ -149,19 +214,19 @@ jobs:
         if: always()
         run: |
           {
-            echo "### نتيجة تحديث الـ APK على release: ${{ inputs.release_tag }}"
+            echo "### نتيجة تحديث التطبيقات على release: ${{ inputs.release_tag }}"
             echo ""
-            echo "- تم تحديثها: ${UPDATED:-لا شيء}"
-            echo "- تم تخطيها (بلا رابط): ${SKIPPED:-لا شيء}"
-            echo "- فشلت: ${FAILED:-لا شيء}"
+            echo "- تم تحديثها:${UPDATED:-  لا شيء}"
+            echo "- تم تخطيها (بلا رابط):${SKIPPED:-  لا شيء}"
+            echo "- فشلت:${FAILED:-  لا شيء}"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload debug screenshot on failure
+      - name: Upload debug files on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: debug-files
           path: |
-            downloads/*
+            _work/**
           if-no-files-found: ignore
           retention-days: 3
