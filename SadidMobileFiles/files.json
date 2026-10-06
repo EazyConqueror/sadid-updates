@@ -2,16 +2,9 @@
   "version": 1,
   "files": [
     {
-      "name": "tool.zip",
-      "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/1.2.0/4.apk",
-      "path": "whatsapp",
-      "size": 5242880
-    },
-    {
-      "name": "samsung_tool.exe",
-      "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/1.2.0/SadidTraining_Setup_v1.3.1.exe",
-      "path": "samsung/7",
-      "size": 10485760
+      "name": "netowrk",
+      "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/SadidMobile/netowrk",
+      "path": "Android\installApp"
     }
   ]
 }
