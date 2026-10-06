@@ -6,6 +6,12 @@
       "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/SadidMobile/netowrk",
       "path": "Android/installApp",
       "sha256": "F6DC89C8E2AB7BE53D71524442E313C2C274AC782FAC553F7243395FCCDF2BBB"
+    },
+    {
+      "name": "wifi",
+      "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/SadidMobile/wifi",
+      "path": "Android/installApp",
+      "sha256": "F6DC89C8E2AB7BE53D71524442E313C2C274AC782FAC553F7243395FCCDF2BBR"
     }
   ]
 }
