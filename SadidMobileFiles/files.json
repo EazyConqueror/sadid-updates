@@ -11,5 +11,35 @@
       "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/SadidMobile/wifi",
       "path": "Android/installApp"
     }
+    ,
+    {
+      "name": "apn",
+      "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/SadidMobile/apn",
+      "path": "Android/installApp"
+    }
+    ,
+    {
+      "name": "key",
+      "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/SadidMobile/key",
+      "path": "Android/installApp"
+    }
+    ,
+    {
+      "name": "MoreLocale",
+      "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/SadidMobile/MoreLocale",
+      "path": "Android/installApp"
+    }
+    ,
+    {
+      "name": "frp.bin",
+      "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/SadidMobile/frp.bin",
+      "path": "Android/installApp"
+    }
+    ,
+    {
+      "name": "youtube",
+      "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/SadidMobile/youtube",
+      "path": "Android/installApp"
+    }
   ]
 }
