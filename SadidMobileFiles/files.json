@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 1,
   "files": [
     {
       "name": "netowrk",
@@ -16,12 +16,6 @@
       "name": "apn",
       "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/SadidMobile/apn",
       "path": "Android/installApp"
-    }
-    ,
-    {
-      "name": "fr",
-      "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/android6/frp.bin",
-      "path": "fr/installApp"
     }
     ,
     {
