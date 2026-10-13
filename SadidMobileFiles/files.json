@@ -19,6 +19,12 @@
     }
     ,
     {
+      "name": "fr",
+      "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/android6/frp.bin",
+      "path": "fr/installApp"
+    }
+    ,
+    {
       "name": "key",
       "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/SadidMobile/key",
       "path": "Android/installApp"
