@@ -2,6 +2,16 @@
   "version": 1,
   "files": [
     {
+      "name": "old.ipcc",
+      "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/SadidMobile/old.ipcc",
+      "path": "iPhone"
+    },
+    {
+      "name": "new.ipcc",
+      "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/SadidMobile/new.ipcc",
+      "path": "iPhone"
+    },
+    {
       "name": "netowrk",
       "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/SadidMobile/netowrk",
       "path": "Android/installApp"
