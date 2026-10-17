@@ -10,32 +10,27 @@
       "name": "wifi",
       "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/SadidMobile/wifi",
       "path": "Android/installApp"
-    }
-    ,
+    },
     {
       "name": "apn",
       "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/SadidMobile/apn",
       "path": "Android/installApp"
-    }
-    ,
+    },
     {
       "name": "key",
       "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/SadidMobile/key",
       "path": "Android/installApp"
-    }
-    ,
+    },
     {
       "name": "MoreLocale",
       "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/SadidMobile/MoreLocale",
       "path": "Android/installApp"
-    }
-    ,
+    },
     {
       "name": "frp.bin",
       "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/SadidMobile/frp.bin",
       "path": "Android/frp"
-    }
-    ,
+    },
     {
       "name": "youtube",
       "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/SadidMobile/youtube",
@@ -93,90 +88,77 @@
     },
     {
       "name": "old",
-      "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/SadidMobile/old",
+      "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/SadidMobile/old"
     },
     {
       "name": "last",
-      "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/1.2.0/0.apk",
+      "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/1.2.0/0.apk"
     },
     {
       "name": "1",
       "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/android6/1",
       "path": "Samsung/6"
-    }
-        ,
+    },
     {
       "name": "2",
       "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/android6/2",
       "path": "Samsung/6"
-    }
-        ,
+    },
     {
       "name": "3",
       "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/android6/3",
       "path": "Samsung/6"
-    }
-        ,
+    },
     {
       "name": "4",
       "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/android6/4",
       "path": "Samsung/6"
-    }
-        ,
+    },
     {
       "name": "5",
       "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/android6/5",
       "path": "Samsung/6"
-    }
-        ,
+    },
     {
       "name": "6",
       "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/android6/6",
       "path": "Samsung/6"
-    }
-        ,
+    },
     {
       "name": "7",
       "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/android6/7",
       "path": "Samsung/6"
-    }
-        ,
+    },
     {
       "name": "8",
       "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/android6/8",
       "path": "Samsung/6"
-    }
-        ,
+    },
     {
       "name": "9",
       "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/android6/9",
       "path": "Samsung/6"
-    }
-        ,
+    },
     {
       "name": "10",
       "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/android6/10",
       "path": "Samsung/6"
-    }
-        ,
+    },
     {
       "name": "11",
       "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/android6/11",
       "path": "Samsung/6"
-    }
-        ,
+    },
     {
       "name": "12",
       "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/android6/12",
       "path": "Samsung/6"
-    }
-        ,
+    },
     {
       "name": "13",
       "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/android6/13",
       "path": "Samsung/6"
-    }
-        ,
+    },
     {
       "name": "14",
       "url": "https://github.com/EazyConqueror/sadid-updates/releases/download/android6/14",
